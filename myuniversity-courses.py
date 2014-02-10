@@ -74,6 +74,7 @@ def create_csv():
 
 print 'Opening web browser ...'
 browser = webdriver.Firefox()
+browser.implicitly_wait(20)
 browser.get(TARGET)
 
 courses = []
