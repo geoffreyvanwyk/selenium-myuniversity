@@ -9,14 +9,18 @@ import csv
 TARGET = 'http://myuniversity.gov.au/UndergraduateCourses'
 
 XPATHS = {
-	'root': "//div[@class='myuni-small-cell-block']",
-    'leaf': './/span',
-    'number_of_pages': 1,
+	'results_root': "//div[@class='myuni-small-cell-block']",
+    'results_leaf': './/span',
+    'next_button': "//a[@rel='next']",
+    'number_of_pages': "//div[@class='myuni-alignright-whenbig'][../p[@id='navigationDescriptor']]/label/span[last()]",
 }
 
 #-------------------------------------------------------------------------------
 # FUNCTION DEFINITIONS
 #-------------------------------------------------------------------------------
+
+def get_number_of_pages():
+	return int(browser.find_element_by_xpath(XPATHS['number_of_pages']).text.replace('of', ''))
 
 def parse_page():
 	print 'Parsing web page ...'
@@ -73,7 +77,7 @@ browser = webdriver.Firefox()
 browser.get(TARGET)
 
 courses = []
-number_of_pages = XPATHS['number_of_pages']
+number_of_pages = 1
 current_page_number = 1
 
 while True:
