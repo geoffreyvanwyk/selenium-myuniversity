@@ -2,15 +2,27 @@ from selenium import webdriver
 from time import localtime
 import csv
 
+#-------------------------------------------------------------------------------
+# CONSTANTS
+#-------------------------------------------------------------------------------
+
 TARGET = 'http://myuniversity.gov.au/UndergraduateCourses'
-ROOT_XPATH = "//div[@class='myuni-small-cell-block']"
-LEAF_XPATH = './/span'
+
+XPATHS = {
+	'root': "//div[@class='myuni-small-cell-block']",
+    'leaf': './/span',
+    'number_of_pages': 1,
+}
+
+#-------------------------------------------------------------------------------
+# FUNCTION DEFINITIONS
+#-------------------------------------------------------------------------------
 
 def parse_page():
 	print 'Parsing web page ...'
-	results = browser.find_elements_by_xpath(ROOT_XPATH)
+	results = browser.find_elements_by_xpath(XPATHS['root'])
 	for result in results:
-		values = result.find_elements_by_xpath(LEAF_XPATH)
+		values = result.find_elements_by_xpath(XPATHS['leaf'])
 		course = {
 			'Course Name': values[0].text,
 			'Cut-off ATAR': values[2].text,
@@ -52,13 +64,25 @@ def create_csv():
 	dict_writer.writer.writerow(column_names)
 	dict_writer.writerows(courses)
 
+#-------------------------------------------------------------------------------
+# BEGIN EXECUTION
+#-------------------------------------------------------------------------------
+
 print 'Opening web browser ...'
 browser = webdriver.Firefox()
 browser.get(TARGET)
 
 courses = []
+number_of_pages = XPATHS['number_of_pages']
+current_page_number = 1
 
-parse_page()
+while True:
+	parse_page()
+	if number_of_pages != current_page_number:
+		current_page_number += 1
+		# Visit next page.
+	else:
+		break
+
 create_csv()
-
 print 'Done.'
