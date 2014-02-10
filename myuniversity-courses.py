@@ -11,7 +11,7 @@ TARGET = 'http://myuniversity.gov.au/UndergraduateCourses'
 XPATHS = {
 	'results_root': "//div[@class='myuni-small-cell-block']",
     'results_leaf': './/span',
-    'next_button': "//a[@rel='next']",
+    'next_button': "//div[@class='myuni-alignright-whenbig'][../p[@id='navigationDescriptor']]/a[last()]",
     'number_of_pages': "//div[@class='myuni-alignright-whenbig'][../p[@id='navigationDescriptor']]/label/span[last()]",
 }
 
@@ -24,9 +24,9 @@ def get_number_of_pages():
 
 def parse_page():
 	print 'Parsing web page ...'
-	results = browser.find_elements_by_xpath(XPATHS['root'])
+	results = browser.find_elements_by_xpath(XPATHS['results_root'])
 	for result in results:
-		values = result.find_elements_by_xpath(XPATHS['leaf'])
+		values = result.find_elements_by_xpath(XPATHS['results_leaf'])
 		course = {
 			'Course Name': values[0].text,
 			'Cut-off ATAR': values[2].text,
@@ -77,14 +77,14 @@ browser = webdriver.Firefox()
 browser.get(TARGET)
 
 courses = []
-number_of_pages = 1
+number_of_pages = 5
 current_page_number = 1
 
 while True:
 	parse_page()
-	if number_of_pages != current_page_number:
+	if number_of_pages > current_page_number:
 		current_page_number += 1
-		# Visit next page.
+		browser.find_element_by_xpath(XPATHS['next_button']).click()
 	else:
 		break
 
