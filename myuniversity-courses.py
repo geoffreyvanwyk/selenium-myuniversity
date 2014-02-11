@@ -96,12 +96,9 @@ def has_page_loaded(driver):
 	except WebDriverException:
 		pass
 
-def get_number_of_pages(driver):
-	return int(driver.find_element_by_xpath(XPATHS['number_of_pages']).text.replace('of', ''))
-
 def parse_all(driver, courses):
 	current_page_number = 1
-	number_of_pages = get_number_of_pages(driver)
+	number_of_pages = int(driver.find_element_by_xpath(XPATHS['number_of_pages']).text.replace('of', ''))
 
 	print 'Total number of pages: ', number_of_pages
 	print 'Now parsing page number:     ', # The comma allows for the page number to appear on the same line.
@@ -118,7 +115,7 @@ def parse_all(driver, courses):
 			finish(courses, 'partial')
 
 	print
-	driver.quit()
+	driver.quit() # Close browser.
 
 #-------------------------------------------------------------------------------
 # EXECUTION
