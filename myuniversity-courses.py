@@ -11,7 +11,10 @@ import csv
 # CONSTANTS
 #-------------------------------------------------------------------------------
 
-TARGET = 'http://myuniversity.gov.au/UndergraduateCourses'
+TARGETS = [
+	'http://myuniversity.gov.au/UndergraduateCourses',
+	'http://myuniversity.gov.au/PostgraduateCourses',
+]
 
 COLUMNS = [
 	'Course Name',
@@ -21,11 +24,12 @@ COLUMNS = [
 	'Field of Education',
 	'Provider',
 	'Campus',
+	'Level',
 ]
 
 XPATHS = {
-	'results_root': "//div[@class='myuni-small-cell-block']",
-    'results_leaf': './/span',
+	'course_elements': "//div[@class='myuni-small-cell-block']",
+    'course_attribute_elements': './/span',
     'next_button': "//div[@class='myuni-alignright-whenbig'][../p[@id='navigationDescriptor']]/a[last()]",
     'number_of_pages': "//div[@class='myuni-alignright-whenbig'][../p[@id='navigationDescriptor']]/label/span[last()]",
 }
@@ -34,35 +38,43 @@ XPATHS = {
 # FUNCTIONS
 #-------------------------------------------------------------------------------
 
-def create_csv(courses):
-	file_name = 'courses-' + datetime.today().strftime("%Y-%m-%dT%H-%M-%S") + '.csv'
-	print "\nWriting results to ", file_name, ' ...'
+def create_csv(courses, status):
+	timestamp = datetime.today().strftime("%Y-%m-%dT%H-%M-%S")
+	file_name = 'myuniversity-courses-' + status + '-' + timestamp  + '.csv'
+	print "\nWriting " + status + " results to ", file_name, ' ...'
 	output_file = open(file_name, 'wb')
 
 	dict_writer = csv.DictWriter(output_file, COLUMNS)
 	dict_writer.writer.writerow(COLUMNS)
 	dict_writer.writerows(courses)
 
-def finish(courses):
-	create_csv(courses)
-	print 'Finish time: ', datetime.today().strftime("%H:%M:%S %b %d, %Y")
-	print 'Done.'
+def finish(courses, status):
+	create_csv(courses, status)
+	if status == 'partial':
+		print
+		print 'WARNING: Timed-out.'
+		print 'Retrying ...'
+		print 'Parsing page:     ', # The comma allows for the page number to appear on the same line.
+	elif status == 'complete':
+		print 'Finish time: ', datetime.today().strftime("%H:%M:%S %b %d, %Y")
+		print 'Done.'
 
 def get_next_page(driver):
 	driver.find_element_by_xpath(XPATHS['next_button']).click()
 
 def parse_page(driver, courses):
-	results = driver.find_elements_by_xpath(XPATHS['results_root'])
-	for result in results:
-		values = result.find_elements_by_xpath(XPATHS['results_leaf'])
+	course_elements = driver.find_elements_by_xpath(XPATHS['course_elements'])
+	for course_element in course_elements:
+		course_attribute_elements = course_element.find_elements_by_xpath(XPATHS['course_attribute_elements'])
 		course = {
-			COLUMNS[0]: values[0].text,
-			COLUMNS[1]: values[2].text,
-			COLUMNS[2]: values[4].text,
-			COLUMNS[3]: values[5].text,
-			COLUMNS[4]: values[6].text,
-			COLUMNS[5]: values[7].text,
-			COLUMNS[6]: values[8].text,
+			COLUMNS[0]: course_attribute_elements[0].text,
+			COLUMNS[1]: course_attribute_elements[2].text,
+			COLUMNS[2]: course_attribute_elements[4].text,
+			COLUMNS[3]: course_attribute_elements[5].text,
+			COLUMNS[4]: course_attribute_elements[6].text,
+			COLUMNS[5]: course_attribute_elements[7].text,
+			COLUMNS[6]: course_attribute_elements[8].text,
+			COLUMNS[7]: driver.current_url.split('/')[-1].replace('Courses', '')
 		}
 		courses.append(course)
 
@@ -90,10 +102,10 @@ def get_number_of_pages(driver):
 def parse_all(driver):
 	courses = []
 	current_page_number = 1
-	number_of_pages = get_number_of_pages(driver)
+	number_of_pages = 5 #get_number_of_pages(driver)
 
 	print 'Number of pages: ', number_of_pages
-	print "Parsing page:     ",
+	print 'Parsing page:     ', # The comma allows for the page number to appear on the same line.
 
 	while number_of_pages >= current_page_number:
 		try:
@@ -103,21 +115,21 @@ def parse_all(driver):
 			current_page_number += 1
 			get_next_page(driver)
 		except TimeoutException:
-			print 'AJAX timed-out'
-			finish(courses)
+			finish(courses, 'partial')
 
-	finish(courses)
-
-def start():
+def start(url):
 	print 'Start time: ', datetime.today().strftime("%H:%M:%S %b %d, %Y")
 	print 'Opening web browser ...'
 	browser = webdriver.Firefox()
-	print 'Visiting: ', TARGET
-	browser.get(TARGET)
+	print 'Visiting: ', url
+	browser.get(url)
 	parse_all(browser)
 
 #-------------------------------------------------------------------------------
 # EXECUTION
 #-------------------------------------------------------------------------------
 
-start()
+for TARGET in TARGETS:
+	start(TARGET)
+
+finish(courses, 'complete')
