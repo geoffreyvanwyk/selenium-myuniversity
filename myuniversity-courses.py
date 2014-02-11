@@ -5,7 +5,6 @@ from selenium.common.exceptions import TimeoutException
 
 from datetime import datetime
 from sys import stdout
-from time import localtime
 import csv
 
 #-------------------------------------------------------------------------------
