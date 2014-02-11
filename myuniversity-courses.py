@@ -86,7 +86,7 @@ browser = webdriver.Firefox()
 browser.get(TARGET)
 
 courses = []
-number_of_pages = 5
+number_of_pages = get_number_of_pages()
 current_page_number = 1
 
 while True:
