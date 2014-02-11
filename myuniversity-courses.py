@@ -1,4 +1,7 @@
 from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import WebDriverException
+
 from time import localtime
 import csv
 
@@ -18,6 +21,12 @@ XPATHS = {
 #-------------------------------------------------------------------------------
 # FUNCTION DEFINITIONS
 #-------------------------------------------------------------------------------
+
+def ajax_complete(driver):
+	try:
+		return 0 == driver.execute_script('return jQuery.active')
+	except WebDriverException:
+		pass
 
 def get_number_of_pages():
 	return int(browser.find_element_by_xpath(XPATHS['number_of_pages']).text.replace('of', ''))
@@ -74,7 +83,6 @@ def create_csv():
 
 print 'Opening web browser ...'
 browser = webdriver.Firefox()
-browser.implicitly_wait(20)
 browser.get(TARGET)
 
 courses = []
@@ -82,6 +90,8 @@ number_of_pages = 5
 current_page_number = 1
 
 while True:
+	WebDriverWait(browser, 10).until(
+		ajax_complete, 'Timeout waiting for page to load.')
 	parse_page()
 	if number_of_pages > current_page_number:
 		current_page_number += 1
