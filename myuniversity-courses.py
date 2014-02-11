@@ -13,6 +13,16 @@ import csv
 
 TARGET = 'http://myuniversity.gov.au/UndergraduateCourses'
 
+COLUMNS = [
+	'Course Name',
+	'Cut-off ATAR',
+	'Duration',
+	'Award Type',
+	'Field of Education',
+	'Provider',
+	'Campus',
+]
+
 XPATHS = {
 	'results_root': "//div[@class='myuni-small-cell-block']",
     'results_leaf': './/span',
@@ -24,77 +34,79 @@ XPATHS = {
 # FUNCTION DEFINITIONS
 #-------------------------------------------------------------------------------
 
-def ajax_complete(driver):
+def create_csv(courses):
+	file_name = 'courses-' + datetime.today().strftime("%Y-%m-%dT%H-%M-%S") + '.csv'
+	print "\nWriting results to ", file_name, ' ...'
+	output_file = open(file_name, 'wb')
+
+	dict_writer = csv.DictWriter(output_file, COLUMNS)
+	dict_writer.writer.writerow(COLUMNS)
+	dict_writer.writerows(courses)
+
+def finish(courses):
+	create_csv(courses)
+	print 'Finish time: ', datetime.today().strftime("%H:%M:%S %b %d, %Y")
+	print 'Done.'
+
+def get_next_page(driver):
+	driver.find_element_by_xpath(XPATHS['next_button']).click()
+
+def parse_page(driver, courses):
+	results = driver.find_elements_by_xpath(XPATHS['results_root'])
+	for result in results:
+		values = result.find_elements_by_xpath(XPATHS['results_leaf'])
+		course = {
+			COLUMNS[0]: values[0].text,
+			COLUMNS[1]: values[2].text,
+			COLUMNS[2]: values[4].text,
+			COLUMNS[3]: values[5].text,
+			COLUMNS[4]: values[6].text,
+			COLUMNS[5]: values[7].text,
+			COLUMNS[6]: values[8].text,
+		}
+		courses.append(course)
+
+def has_page_loaded(driver):
 	try:
 		return 0 == driver.execute_script('return jQuery.active')
 	except WebDriverException:
 		pass
 
-def get_number_of_pages():
-	return int(browser.find_element_by_xpath(XPATHS['number_of_pages']).text.replace('of', ''))
+def get_number_of_pages(driver):
+	return int(driver.find_element_by_xpath(XPATHS['number_of_pages']).text.replace('of', ''))
 
-def parse_page():
-	results = browser.find_elements_by_xpath(XPATHS['results_root'])
-	for result in results:
-		values = result.find_elements_by_xpath(XPATHS['results_leaf'])
-		course = {
-			'Course Name': values[0].text,
-			'Cut-off ATAR': values[2].text,
-			'Duration': values[4].text,
-			'Award Type': values[5].text,
-			'Field of Education': values[6].text,
-			'Provider': values[7].text,
-			'Campus': values[8].text,
-		}
-		courses.append(course)
+def parse_all(driver):
+	courses = []
+	current_page_number = 1
+	number_of_pages = 5
 
-def create_csv():
-	column_names = [
-		'Course Name',
-		'Cut-off ATAR',
-		'Duration',
-		'Award Type',
-		'Field of Education',
-		'Provider',
-		'Campus',
-	]
+	print 'Number of pages: ', number_of_pages
+	print 'Parsing page:  ',
 
-	file_name = 'courses-' + datetime.today().strftime("%Y-%m-%dT%H-%M-%S") + '.csv'
-	print "\nWriting results to ", file_name, ' ...'
+	while number_of_pages >= current_page_number:
+		WebDriverWait(driver, 10).until(
+			has_page_loaded,
+			lambda courses: finish(courses)
+		)
+		stdout.write("\b%d" %  current_page_number)
+		stdout.flush()
 
-	output_file = open(file_name, 'wb')
-	dict_writer = csv.DictWriter(output_file, column_names)
-	dict_writer.writer.writerow(column_names)
-	dict_writer.writerows(courses)
+		parse_page(driver, courses)
+		current_page_number += 1
+		get_next_page(driver)
+
+	finish(courses)
+
+def start():
+	print 'Start time: ', datetime.today().strftime("%H:%M:%S %b %d, %Y")
+	print 'Opening web browser ...'
+	browser = webdriver.Firefox()
+	print 'Visiting: ', TARGET
+	browser.get(TARGET)
+	parse_all(browser)
 
 #-------------------------------------------------------------------------------
 # BEGIN EXECUTION
 #-------------------------------------------------------------------------------
 
-print 'Start time: ', datetime.today().strftime("%H:%M:%S %b %d, %Y")
-print 'Opening web browser ...'
-
-browser = webdriver.Firefox()
-browser.get(TARGET)
-
-courses = []
-current_page_number = 1
-number_of_pages = 5
-
-print 'Number of pages: ', number_of_pages
-print 'Parsing page:  ',
-
-while number_of_pages >= current_page_number:
-	WebDriverWait(browser, 10).until(
-		ajax_complete,
-		create_csv
-	)
-	stdout.write("\b%d" %  current_page_number)
-	stdout.flush()
-	parse_page()
-	current_page_number += 1
-	browser.find_element_by_xpath(XPATHS['next_button']).click()
-
-create_csv()
-print 'Stop time: ', datetime.today().strftime("%H:%M:%S %b %d, %Y")
-print 'Done.'
+start()
