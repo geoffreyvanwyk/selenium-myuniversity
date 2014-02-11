@@ -2,6 +2,8 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import WebDriverException
 
+from datetime import datetime
+from sys import stdout
 from time import localtime
 import csv
 
@@ -32,7 +34,6 @@ def get_number_of_pages():
 	return int(browser.find_element_by_xpath(XPATHS['number_of_pages']).text.replace('of', ''))
 
 def parse_page():
-	print 'Parsing web page ...'
 	results = browser.find_elements_by_xpath(XPATHS['results_root'])
 	for result in results:
 		values = result.find_elements_by_xpath(XPATHS['results_leaf'])
@@ -47,17 +48,6 @@ def parse_page():
 		}
 		courses.append(course)
 
-def get_timestamp():
-	current_time = localtime()
-	return '-'.join(map(str, [
-		current_time.tm_year,
-		current_time.tm_mon,
-		current_time.tm_mday,
-		current_time.tm_hour,
-		current_time.tm_min,
-		current_time.tm_sec,
-	]))
-
 def create_csv():
 	column_names = [
 		'Course Name',
@@ -69,8 +59,8 @@ def create_csv():
 		'Campus',
 	]
 
-	file_name = 'courses-' + get_timestamp() + '.csv'
-	print 'Writing results to ', file_name, ' ...'
+	file_name = 'courses-' + datetime.today().strftime("%Y-%m-%dT%H-%M-%S") + '.csv'
+	print "\nWriting results to ", file_name, ' ...'
 
 	output_file = open(file_name, 'wb')
 	dict_writer = csv.DictWriter(output_file, column_names)
@@ -81,23 +71,30 @@ def create_csv():
 # BEGIN EXECUTION
 #-------------------------------------------------------------------------------
 
+print 'Start time: ', datetime.today().strftime("%H:%M:%S %b %d, %Y")
 print 'Opening web browser ...'
+
 browser = webdriver.Firefox()
 browser.get(TARGET)
 
 courses = []
-number_of_pages = get_number_of_pages()
 current_page_number = 1
+number_of_pages = 5
 
-while True:
+print 'Number of pages: ', number_of_pages
+print 'Parsing page:  ',
+
+while number_of_pages >= current_page_number:
 	WebDriverWait(browser, 10).until(
-		ajax_complete, 'Timeout waiting for page to load.')
+		ajax_complete,
+		create_csv
+	)
+	stdout.write("\b%d" %  current_page_number)
+	stdout.flush()
 	parse_page()
-	if number_of_pages > current_page_number:
-		current_page_number += 1
-		browser.find_element_by_xpath(XPATHS['next_button']).click()
-	else:
-		break
+	current_page_number += 1
+	browser.find_element_by_xpath(XPATHS['next_button']).click()
 
 create_csv()
+print 'Stop time: ', datetime.today().strftime("%H:%M:%S %b %d, %Y")
 print 'Done.'
