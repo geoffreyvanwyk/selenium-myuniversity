@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import TimeoutException
 
 from datetime import datetime
 from sys import stdout
@@ -31,7 +32,7 @@ XPATHS = {
 }
 
 #-------------------------------------------------------------------------------
-# FUNCTION DEFINITIONS
+# FUNCTIONS
 #-------------------------------------------------------------------------------
 
 def create_csv(courses):
@@ -66,6 +67,18 @@ def parse_page(driver, courses):
 		}
 		courses.append(course)
 
+def get_backspaces(page_number):
+	n = page_number
+	b = "\b"
+	while n / 10 > 0:
+		b += "\b"
+		n /= 10
+	return b
+
+def print_page_number(page_number):
+	stdout.write(get_backspaces(page_number) + "%d" % page_number)
+	stdout.flush()
+
 def has_page_loaded(driver):
 	try:
 		return 0 == driver.execute_script('return jQuery.active')
@@ -78,22 +91,21 @@ def get_number_of_pages(driver):
 def parse_all(driver):
 	courses = []
 	current_page_number = 1
-	number_of_pages = 5
+	number_of_pages = get_number_of_pages(driver)
 
 	print 'Number of pages: ', number_of_pages
-	print 'Parsing page:  ',
+	print "Parsing page:     ",
 
 	while number_of_pages >= current_page_number:
-		WebDriverWait(driver, 10).until(
-			has_page_loaded,
-			lambda courses: finish(courses)
-		)
-		stdout.write("\b%d" %  current_page_number)
-		stdout.flush()
-
-		parse_page(driver, courses)
-		current_page_number += 1
-		get_next_page(driver)
+		try:
+			WebDriverWait(driver, 10).until(has_page_loaded)
+			print_page_number(current_page_number)
+			parse_page(driver, courses)
+			current_page_number += 1
+			get_next_page(driver)
+		except TimeoutException:
+			print 'AJAX timed-out'
+			finish(courses)
 
 	finish(courses)
 
@@ -106,7 +118,7 @@ def start():
 	parse_all(browser)
 
 #-------------------------------------------------------------------------------
-# BEGIN EXECUTION
+# EXECUTION
 #-------------------------------------------------------------------------------
 
 start()
