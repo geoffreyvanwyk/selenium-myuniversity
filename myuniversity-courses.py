@@ -53,12 +53,17 @@ def finish(courses, status):
 	if status == 'partial':
 		print 'WARNING: Timed-out.'
 		print 'Retrying ...'
-		print 'Now parsing page number:     ', # The comma allows for the page number to appear on the same line.
+
+		# The comma at the end of the print, allows for the page number to appear on the same line.
+		# Five spaces between number: and the closing ', prevents the backspaces deleting part of this label.
+		print 'Now parsing page number:     ',
+
 	elif status == 'complete':
 		print 'Finish time: ', datetime.today().strftime("%H:%M:%S %b %d, %Y")
 		print 'Done.'
 
 def get_next_page(driver):
+	''' Click the Next link at the bottom of the page.'''
 	driver.find_element_by_xpath(XPATHS['next_button']).click()
 
 def parse_page(driver, courses):
@@ -79,6 +84,11 @@ def parse_page(driver, courses):
 		courses.append(course)
 
 def get_backspaces(page_number):
+	'''
+	To update the current page number in place, the previous number has to be deleted with backspace characters.
+	The number of backspaces depends upon the number of digits in the number. Every time the number is divided by 10,
+	one of the digits is taken away. In this way, an additional backspace is appended for every digit.
+	'''
 	n = page_number
 	b = "\b"
 	while n / 10 > 0:
@@ -101,15 +111,18 @@ def parse_all(driver, courses):
 	number_of_pages = int(driver.find_element_by_xpath(XPATHS['number_of_pages']).text.replace('of', ''))
 
 	print 'Total number of pages: ', number_of_pages
-	print 'Now parsing page number:     ', # The comma allows for the page number to appear on the same line.
+
+	# The comma at the end of the print, allows for the page number to appear on the same line.
+	# Five spaces between number: and the closing ', prevents the backspaces deleting part of this label.
+	print 'Now parsing page number:     ',
 
 	while number_of_pages >= current_page_number:
 		try:
-			WebDriverWait(driver, 10).until(has_page_loaded)
+			WebDriverWait(driver, 10).until(has_page_loaded) # Wait for so-many seconds before parsing page.
 			print_page_number(current_page_number)
 			parse_page(driver, courses)
 			current_page_number += 1
-			get_next_page(driver)
+			get_next_page(driver) # Click the 'Next' link at the bottom of the page.
 		except TimeoutException:
 			print
 			finish(courses, 'partial')
