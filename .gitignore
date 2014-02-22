@@ -1,2 +1,5 @@
 .directory
 *zip
+build/
+dist/
+*spec
